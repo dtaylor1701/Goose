@@ -1,3 +1,3 @@
 # Goose
 
-A description of this package.
+Miscellaneous utilities for Swift. 
