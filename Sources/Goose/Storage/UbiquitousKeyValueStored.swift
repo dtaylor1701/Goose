@@ -38,9 +38,8 @@ public struct UbiquitousKeyValueStored<T> where T: Codable {
     }
     
     public func sync() {
-        if let data = NSUbiquitousKeyValueStore.default.data(forKey: key),
-           let value = try? JSONDecoder().decode(T.self, from: data) {
-            UserDefaults.standard.set(value, forKey: key)
+        if let data = NSUbiquitousKeyValueStore.default.data(forKey: key) {
+            UserDefaults.standard.set(data, forKey: key)
         } else {
             UserDefaults.standard.removeObject(forKey: key)
         }
