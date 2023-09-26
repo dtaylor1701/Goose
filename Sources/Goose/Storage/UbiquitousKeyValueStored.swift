@@ -11,15 +11,17 @@ import Foundation
 public struct UbiquitousKeyValueStored<T> where T: Codable {
     public let key: String
     public let defaultValue: T?
+    public let userDefaults: UserDefaults
 
-    public init(_ key: String, defaultValue: T?) {
+    public init(_ key: String, defaultValue: T?, userDefaults: UserDefaults = .standard) {
         self.key = key
         self.defaultValue = defaultValue
+        self.userDefaults = userDefaults
     }
-
+    
     public var wrappedValue: T? {
         get {
-            guard let data = UserDefaults.standard.data(forKey: key),
+            guard let data = userDefaults.data(forKey: key),
                   let value = try? JSONDecoder().decode(T.self, from: data) else {
                 return defaultValue
             }
@@ -28,10 +30,10 @@ public struct UbiquitousKeyValueStored<T> where T: Codable {
         }
         set {
             if let data = try? JSONEncoder().encode(newValue){
-                UserDefaults.standard.set(data, forKey: key)
+                userDefaults.set(data, forKey: key)
                 NSUbiquitousKeyValueStore.default.set(data, forKey: key)
             } else {
-                UserDefaults.standard.removeObject(forKey: key)
+                userDefaults.removeObject(forKey: key)
                 NSUbiquitousKeyValueStore.default.removeObject(forKey: key)
             }
         }
@@ -39,9 +41,9 @@ public struct UbiquitousKeyValueStored<T> where T: Codable {
     
     public func sync() {
         if let data = NSUbiquitousKeyValueStore.default.data(forKey: key) {
-            UserDefaults.standard.set(data, forKey: key)
+            userDefaults.set(data, forKey: key)
         } else {
-            UserDefaults.standard.removeObject(forKey: key)
+            userDefaults.removeObject(forKey: key)
         }
     }
 }
