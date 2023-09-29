@@ -7,6 +7,7 @@
 
 import Foundation
 
+@available(watchOS 9.0, *)
 @propertyWrapper
 public struct UbiquitousKeyValueStored<T> where T: Codable {
     public let key: String
