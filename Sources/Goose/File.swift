@@ -1,7 +1,7 @@
 import Foundation
 
 /// A bookmarked file reference.
-public struct File: Codable {
+public struct File: Codable, Equatable {
   public enum FileError: Error {
     case couldNotAccessResource
   }
