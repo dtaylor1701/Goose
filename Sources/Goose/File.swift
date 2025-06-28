@@ -1,5 +1,5 @@
 import Foundation
-
+#if os(macOS)
 /// A bookmarked file reference.
 public struct File: Codable, Equatable {
   public enum FileError: Error {
@@ -57,3 +57,4 @@ public struct File: Codable, Equatable {
     return url
   }
 }
+#endif

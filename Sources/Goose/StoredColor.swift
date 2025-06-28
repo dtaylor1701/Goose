@@ -12,11 +12,13 @@ public struct StoredColor: Codable {
   public var colorSpace: String
   public var components: [CGFloat]
   
+  static let clear = StoredColor(colorSpace: String(CGColorSpace.sRGB), components: [0, 0, 0, 0])
+  
   public var cgColor: CGColor {
     guard let cgColorSpace = CGColorSpace(name: colorSpace as CFString) else {
-      return .clear
+      return Self.clear.cgColor
     }
-    return CGColor(colorSpace: cgColorSpace, components: components) ?? .clear
+    return CGColor(colorSpace: cgColorSpace, components: components) ?? Self.clear.cgColor
   }
   
   public init(colorSpace: String?, components: [CGFloat]?) {
