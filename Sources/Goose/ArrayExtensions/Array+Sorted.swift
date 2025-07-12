@@ -1,10 +1,3 @@
-//
-//  Array+Sorted.swift
-//
-//
-//  Created by David Taylor on 12/28/22.
-//
-
 import Foundation
 
 public enum SortDirection {

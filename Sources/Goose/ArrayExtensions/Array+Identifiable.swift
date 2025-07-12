@@ -1,10 +1,3 @@
-//
-//  Array+Identifiable.swift
-//
-//
-//  Created by David Taylor on 12/28/22.
-//
-
 import Foundation
 
 @available(macOS 10.15, *)
