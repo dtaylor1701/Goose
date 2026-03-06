@@ -1,27 +1,27 @@
-import XCTest
-
+import Testing
 @testable import Goose
 
-final class ArraySortedTests: XCTestCase {
-  func testSortedAscending() throws {
+@Suite("Array+Sorted Tests")
+struct ArraySortedTests {
+  @Test func sortedAscending() throws {
     let toSort = [TestItem(id: 4), TestItem(id: 2), TestItem(id: 5), TestItem(id: 1)]
     let expected = [TestItem(id: 1), TestItem(id: 2), TestItem(id: 4), TestItem(id: 5)]
 
-    XCTAssertEqual(toSort.sorted(by: \.id), expected)
+    #expect(toSort.sorted(by: \.id) == expected)
   }
 
-  func testSortedDescending() throws {
+  @Test func sortedDescending() throws {
     let toSort = [TestItem(id: 4), TestItem(id: 2), TestItem(id: 5), TestItem(id: 1)]
     let expected = [TestItem(id: 5), TestItem(id: 4), TestItem(id: 2), TestItem(id: 1)]
 
-    XCTAssertEqual(toSort.sorted(by: \.id, direction: .descending), expected)
+    #expect(toSort.sorted(by: \.id, direction: .descending) == expected)
   }
 
-  func testWrapper() throws {
+  @Test func wrapper() throws {
     let toSort = [TestItem(id: 4), TestItem(id: 2), TestItem(id: 5), TestItem(id: 1)]
     let expected = [TestItem(id: 1), TestItem(id: 2), TestItem(id: 4), TestItem(id: 5)]
 
-    XCTAssertEqual(Sorted(wrappedValue: toSort, \.id).wrappedValue, expected)
+    #expect(Sorted(wrappedValue: toSort, \.id).wrappedValue == expected)
   }
 }
 
