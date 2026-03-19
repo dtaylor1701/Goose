@@ -10,12 +10,13 @@
     public private(set) var bookmark: Data
 
     public init(at url: URL) throws {
-      defer {
-        url.stopAccessingSecurityScopedResource()
-      }
+      // This may return false if the URL is already accessible.
+      let isScoped = url.startAccessingSecurityScopedResource()
 
-      guard url.startAccessingSecurityScopedResource() else {
-        throw FileError.couldNotAccessResource
+      defer {
+        if isScoped {
+          url.stopAccessingSecurityScopedResource()
+        }
       }
 
       self.bookmark = try url.bookmarkData(options: .withSecurityScope)
