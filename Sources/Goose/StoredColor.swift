@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-public struct StoredColor: Codable, Sendable {
+public struct StoredColor: Codable, Sendable, Equatable {
   public var colorSpace: String
   public var components: [CGFloat]
 
