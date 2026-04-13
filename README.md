@@ -58,15 +58,41 @@ let decoded = try JSONDecoder().decode(StoredColor.self, from: data)
 let cgColor = decoded.cgColor
 ```
 
-### Security-Scoped Files (macOS)
+### Security-Scoped Files
 ```swift
 import Goose
 
 // Create a persistent reference to a user-selected file
 let file = try File(at: selectedURL)
 
-// Access file data later, even after app restart
+// Access file data (automatically updates bookmark if stale)
+var file = try File(at: selectedURL)
 let data = try file.data()
+
+// Perform complex operations safely with closure-based access
+try await file.withURL { url in
+    // URL is automatically accessed here
+    let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+    // ...
+}
+
+### Using with Actors
+
+Because `File` is a `struct` with `mutating` methods that update its internal bookmark, you cannot call them directly on actor properties. Instead, use the **Copy-Modify-Assign** pattern:
+
+```swift
+actor FileStore {
+    var file: File
+    
+    func process() async throws {
+        var fileCopy = self.file // Create local copy
+        try await fileCopy.withURL { url in 
+            // ...
+        }
+        self.file = fileCopy // Re-assign updated bookmark
+    }
+}
+```
 ```
 
 ### Sorted Collections

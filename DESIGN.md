@@ -30,13 +30,15 @@ A `Codable` wrapper for `CGColor`. Standard `CGColor` does not conform to `Codab
     - `var cgColor: CGColor { get }`
 - **Use Case:** Storing user-selected colors in a JSON configuration file or `UserDefaults`.
 
-### 5.2 File (macOS Specific)
-A robust implementation of security-scoped bookmarks. Essential for macOS apps that need to remember user-selected files across application launches while operating within a sandbox.
+### 5.2 File
+A robust implementation of security-scoped bookmarks. Essential for macOS and iOS apps that need to remember user-selected files across application launches while operating within a sandbox.
 - **API:**
     - `init(at url: URL) throws`: Creates a bookmark and manages security-scope entry/exit.
-    - `func url() throws -> URL`: Resolves and refreshes stale bookmarks automatically.
-    - `func data() throws -> Data`: Direct access to file contents with managed resource scope.
-- **Model:** Encapsulates `Data` (the bookmark) and ensures `startAccessingSecurityScopedResource()` is called correctly.
+    - `mutating func withURL<T>(_ block: (URL) throws -> T) throws -> T`: Accesses the bookmark, automatically updating it if stale.
+    - `mutating func withURL<T>(_ block: (URL) async throws -> T) async throws -> T`: Asynchronous version of `withURL`.
+    - `mutating func resolveURL() throws -> URL`: Resolves and automatically refreshes stale bookmarks.
+    - `mutating func data() throws -> Data`: Direct access to file contents with managed resource scope and automatic bookmark refresh.
+- **Model:** Encapsulates `Data` (the bookmark) and ensures `startAccessingSecurityScopedResource()` is called correctly via closure-based patterns.
 
 ### 5.3 Array Extensions
 #### Array+Identifiable
