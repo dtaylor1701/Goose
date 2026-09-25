@@ -66,4 +66,44 @@ struct ProcessRunnerTests {
             _ = try await ProcessRunner.run(executablePath: "/nonexistent/tool", arguments: [])
         }
     }
+
+    @Test("Output is delivered to the handler as it arrives, before run returns")
+    func streamsOutput() async throws {
+        let received = ProcessDataBuffer()
+        let errors = ProcessDataBuffer()
+        let result = try await ProcessRunner.run(
+            executablePath: "/bin/sh",
+            arguments: ["-c", "echo one; sleep 0.2; echo two; echo oops >&2"]
+        ) { chunk in
+            (chunk.source == .standardOutput ? received : errors).append(chunk.data)
+        }
+        #expect(String(decoding: received.getData(), as: UTF8.self) == "one\ntwo\n")
+        #expect(String(decoding: errors.getData(), as: UTF8.self) == "oops\n")
+        #expect(result.output == "one\ntwo\n")
+    }
+
+    @Test("The first chunk arrives while the process is still running")
+    func streamsBeforeExit() async throws {
+        let start = ContinuousClock.now
+        let arrival = LockedValue<Duration?>(nil)
+        _ = try await ProcessRunner.run(executablePath: "/bin/sh", arguments: ["-c", "echo early; sleep 1"]) { _ in
+            arrival.setIfNil(ContinuousClock.now - start)
+        }
+        let elapsed = try #require(arrival.value)
+        #expect(elapsed < .milliseconds(900))
+    }
+}
+
+/// A lock-protected value for recording from background callbacks.
+private final class LockedValue<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value
+
+    init(_ value: Value) { stored = value }
+
+    var value: Value { lock.withLock { stored } }
+
+    func setIfNil<Wrapped>(_ newValue: Wrapped) where Value == Wrapped? {
+        lock.withLock { if stored == nil { stored = newValue } }
+    }
 }

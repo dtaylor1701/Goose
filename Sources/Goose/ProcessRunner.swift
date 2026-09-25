@@ -14,6 +14,8 @@ import Foundation
 /// - After the process exits, output is collected until both pipes reach end-of-file or
 ///   `drainGracePeriod` elapses, so background children that inherit the pipes cannot hang
 ///   the caller.
+/// - An optional `onOutput` handler receives output as it arrives. Every call to it happens
+///   before `run` returns.
 ///
 /// ```swift
 /// let result = try await ProcessRunner.run(
@@ -48,6 +50,27 @@ public struct ProcessRunner: Sendable {
         public var succeeded: Bool { termination == .exited && exitCode == 0 }
     }
 
+    /// A piece of output read from one of the process's pipes.
+    public struct OutputChunk: Sendable, Equatable {
+        /// The pipe a chunk was read from.
+        public enum Source: Sendable, Equatable {
+            case standardOutput
+            case standardError
+        }
+
+        public let source: Source
+        public let data: Data
+
+        public init(source: Source, data: Data) {
+            self.source = source
+            self.data = data
+        }
+    }
+
+    /// Receives output while a process runs. Called on a background thread, one chunk at a
+    /// time per pipe, so it should return quickly.
+    public typealias OutputHandler = @Sendable (OutputChunk) -> Void
+
     /// How a process run ended.
     public enum Termination: Sendable, Equatable {
         /// The process exited on its own.
@@ -67,6 +90,7 @@ public struct ProcessRunner: Sendable {
     ///   - environment: Optional environment. When `nil`, inherits the parent process environment.
     ///   - timeout: Seconds after which the process is terminated. `nil` waits indefinitely.
     ///   - drainGracePeriod: Seconds to keep collecting output after exit while waiting for end-of-file.
+    ///   - onOutput: Receives output as it arrives; the returned ``Result`` still contains all of it.
     /// - Returns: A ``Result`` containing the exit code, captured output streams, and termination reason.
     /// - Throws: Any error thrown by `Process.run()` (e.g. executable not found).
     public static func run(
@@ -75,7 +99,8 @@ public struct ProcessRunner: Sendable {
         currentDirectory: URL? = nil,
         environment: [String: String]? = nil,
         timeout: TimeInterval? = nil,
-        drainGracePeriod: TimeInterval = 1.0
+        drainGracePeriod: TimeInterval = 1.0,
+        onOutput: OutputHandler? = nil
     ) async throws -> Result {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
@@ -88,7 +113,7 @@ public struct ProcessRunner: Sendable {
         }
         process.standardInput = FileHandle.nullDevice
 
-        let run = ProcessRun(process: process, drainGracePeriod: drainGracePeriod)
+        let run = ProcessRun(process: process, drainGracePeriod: drainGracePeriod, onOutput: onOutput)
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -108,6 +133,10 @@ private final class ProcessRun: @unchecked Sendable {
     private let errorPipe = Pipe()
     private let outBuffer = ProcessDataBuffer()
     private let errorBuffer = ProcessDataBuffer()
+    private let onOutput: ProcessRunner.OutputHandler?
+    /// Serializes delivery to `onOutput` with finishing, so no chunk is delivered after `run` returns.
+    private let deliveryLock = NSLock()
+    private var isDelivering = true
 
     private let lock = NSLock()
     private var continuation: CheckedContinuation<ProcessRunner.Result, Error>?
@@ -117,9 +146,10 @@ private final class ProcessRun: @unchecked Sendable {
     private var stopReason: ProcessRunner.Termination?
     private var isFinished = false
 
-    init(process: Process, drainGracePeriod: TimeInterval) {
+    init(process: Process, drainGracePeriod: TimeInterval, onOutput: ProcessRunner.OutputHandler?) {
         self.process = process
         self.drainGracePeriod = drainGracePeriod
+        self.onOutput = onOutput
         process.standardOutput = outPipe
         process.standardError = errorPipe
     }
@@ -190,7 +220,11 @@ private final class ProcessRun: @unchecked Sendable {
             }
             if ready { finish() }
         } else {
-            (isOutput ? outBuffer : errorBuffer).append(chunk)
+            deliveryLock.withLock {
+                guard isDelivering else { return }
+                (isOutput ? outBuffer : errorBuffer).append(chunk)
+                onOutput?(ProcessRunner.OutputChunk(source: isOutput ? .standardOutput : .standardError, data: chunk))
+            }
         }
     }
 
@@ -220,6 +254,9 @@ private final class ProcessRun: @unchecked Sendable {
 
         outPipe.fileHandleForReading.readabilityHandler = nil
         errorPipe.fileHandleForReading.readabilityHandler = nil
+        // Waits for any chunk being delivered, then drops later ones, so the result and the
+        // handler see the same output.
+        deliveryLock.withLock { isDelivering = false }
         let reason = lock.withLock { stopReason } ?? .exited
         pending.resume(returning: ProcessRunner.Result(
             exitCode: process.terminationStatus,
