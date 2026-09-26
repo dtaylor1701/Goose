@@ -6,7 +6,15 @@ public enum DeveloperEnvironment {
     /// Common locations for developer tools that GUI apps don't inherit.
     public static let toolDirectories = ["/opt/homebrew/bin", "/opt/homebrew/sbin", "/usr/local/bin"]
 
-    /// `path` with the Homebrew, `/usr/local`, and `~/.local/bin` directories prepended when missing.
+    /// Home-relative directories where version managers and language toolchains install
+    /// commands (e.g. `npx` under nodenv or Volta). Only the ones that exist are added.
+    public static let homeToolDirectories = [
+        ".nodenv/shims", ".volta/bin", ".bun/bin", ".deno/bin", ".cargo/bin",
+        ".pyenv/shims", ".rbenv/shims", ".asdf/shims", ".local/share/mise/shims"
+    ]
+
+    /// `path` with the Homebrew, `/usr/local`, `~/.local/bin`, and existing version-manager
+    /// directories prepended when missing.
     public static func augmentedPATH(
         _ path: String? = ProcessInfo.processInfo.environment["PATH"],
         homeDirectory: String = NSHomeDirectory()
@@ -14,7 +22,10 @@ public enum DeveloperEnvironment {
         let fallback = "/usr/bin:/bin:/usr/sbin:/sbin"
         let current = ((path?.isEmpty ?? true) ? fallback : path ?? fallback)
             .split(separator: ":").map(String.init)
-        let extra = toolDirectories + ["\(homeDirectory)/.local/bin"]
+        let managed = homeToolDirectories
+            .map { "\(homeDirectory)/\($0)" }
+            .filter { FileManager.default.fileExists(atPath: $0) }
+        let extra = toolDirectories + ["\(homeDirectory)/.local/bin"] + managed
         return (extra.filter { !current.contains($0) } + current).joined(separator: ":")
     }
 

@@ -53,4 +53,15 @@ struct SmallHelperTests {
         #expect(DeveloperEnvironment.augmentedPATH(nil, homeDirectory: "/h").hasSuffix("/usr/bin:/bin:/usr/sbin:/sbin"))
         #expect(DeveloperEnvironment.executablePath(named: "sh", searchPath: "/nope:/bin") == "/bin/sh")
     }
+
+    @Test("Existing version-manager directories are added")
+    func versionManagers() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("GooseHome_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: home.appendingPathComponent(".nodenv/shims"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        let path = DeveloperEnvironment.augmentedPATH("/usr/bin", homeDirectory: home.path)
+        #expect(path.contains("\(home.path)/.nodenv/shims"))
+        #expect(!path.contains(".volta"))
+    }
 }
