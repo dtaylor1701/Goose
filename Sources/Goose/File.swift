@@ -30,7 +30,20 @@ public struct File: Codable, Equatable, Sendable {
             }
         }
 
-        self.bookmark = try url.bookmarkData(options: .withSecurityScope)
+        let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+        if isSandboxed {
+            do {
+                #if os(macOS)
+                self.bookmark = try url.bookmarkData(options: .withSecurityScope)
+                #else
+                self.bookmark = try url.bookmarkData(options: [])
+                #endif
+            } catch {
+                self.bookmark = try url.bookmarkData(options: [])
+            }
+        } else {
+            self.bookmark = try url.bookmarkData(options: [])
+        }
         self.filename = url.lastPathComponent
     }
 
@@ -88,20 +101,55 @@ public struct File: Codable, Equatable, Sendable {
     /// - Throws: An error if resolution fails.
     public mutating func resolveURL() throws -> URL {
         var isStale = false
+        let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+        
+        if isSandboxed {
+            do {
+                #if os(macOS)
+                let resolutionOptions: URL.BookmarkResolutionOptions = .withSecurityScope
+                #else
+                let resolutionOptions: URL.BookmarkResolutionOptions = []
+                #endif
+                
+                let url = try URL(
+                    resolvingBookmarkData: bookmark,
+                    options: resolutionOptions,
+                    bookmarkDataIsStale: &isStale
+                )
+                
+                if isStale {
+                    let isScoped = url.startAccessingSecurityScopedResource()
+                    defer {
+                        if isScoped {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
+                    do {
+                        #if os(macOS)
+                        bookmark = try url.bookmarkData(options: .withSecurityScope)
+                        #else
+                        bookmark = try url.bookmarkData(options: [])
+                        #endif
+                    } catch {
+                        bookmark = try url.bookmarkData(options: [])
+                    }
+                }
+                
+                return url
+            } catch {
+                // Fallback to standard resolution below
+            }
+        }
+        
+        // Resolve as standard bookmark (without security scope)
         let url = try URL(
             resolvingBookmarkData: bookmark,
-            options: .withSecurityScope,
+            options: [],
             bookmarkDataIsStale: &isStale
         )
         
         if isStale {
-            let isScoped = url.startAccessingSecurityScopedResource()
-            defer {
-                if isScoped {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-            bookmark = try url.bookmarkData(options: .withSecurityScope)
+            bookmark = try url.bookmarkData(options: [])
         }
         
         return url
