@@ -16,6 +16,10 @@ Robust abstractions for macOS security-scoped bookmarks, essential for sandboxed
 Type-safe enhancements for Swift’s standard library collections, focusing on `Identifiable` and `Comparable` protocols.
 - **`Array+Identifiable`**: Streamlines operations like safe updates, targeted deletion, and ID extraction for arrays of `Identifiable` elements.
 - **`Array+Sorted`**: Provides KeyPath-based sorting and a `@Sorted` property wrapper to maintain collection order automatically.
+- **`String.addingQueryValueEncoding()`**: Percent-encodes one URL query value, always escaping `+ & = # ?` (unlike `.urlQueryAllowed`), so values survive both Foundation and `URLSearchParams` decoding.
+
+### 🧭 Environment
+- **`DeveloperEnvironment`**: Augments the minimal `PATH` that Finder-launched apps receive so they find Homebrew and version-manager tools.
 
 ## Installation
 
