@@ -66,6 +66,18 @@ struct GitRepositoryTests {
         #expect(try await git.value(["branch", "--list", "feature"]).isEmpty)
     }
 
+    @Test("The current branch, or nil when detached or outside a repository")
+    func currentBranch() async throws {
+        let (git, root) = try await makeRepository()
+        defer { try? FileManager.default.removeItem(at: root) }
+        #expect(await git.currentBranch() == "main")
+        try await git.run(["checkout", "-q", "-b", "feat/x"])
+        #expect(await git.currentBranch() == "feat/x")
+        try await git.run(["checkout", "-q", "--detach"])
+        #expect(await git.currentBranch() == nil)
+        #expect(await GitRepository(directory: FileManager.default.temporaryDirectory).currentBranch() == nil)
+    }
+
     @Test("Failures carry git's message; non-repositories have no top level")
     func failures() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("GooseNoGit_\(UUID().uuidString)")

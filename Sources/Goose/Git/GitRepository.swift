@@ -54,6 +54,12 @@ public struct GitRepository: Sendable {
         try? await value(["rev-parse", "--verify", "HEAD"])
     }
 
+    /// The branch checked out, or `nil` on a detached `HEAD` or outside a repository.
+    public func currentBranch() async -> String? {
+        guard let name = try? await value(["symbolic-ref", "--quiet", "--short", "HEAD"]), !name.isEmpty else { return nil }
+        return name
+    }
+
     /// Working-tree status parsed from `git status --porcelain=v1 -z`.
     ///
     /// - Parameter pathspec: Limits the status to these pathspecs (e.g. `[".", ":(exclude).ant"]`).
