@@ -32,7 +32,16 @@ extension URL {
 
     /// Whether this file URL is `root` or lies inside it, comparing canonical paths.
     public func isContained(in root: URL) -> Bool {
-        guard let path = canonicalFileURL?.path, let rootPath = root.canonicalFileURL?.path else { return false }
-        return path == rootPath || path.hasPrefix(rootPath.hasSuffix("/") ? rootPath : rootPath + "/")
+        canonicalFileURL.flatMap { $0.relativePath(from: root) } != nil
+    }
+
+    /// This file URL's path relative to `root`, using `/`: `"."` for `root` itself, `nil` when
+    /// it lies outside. Both are made canonical first, so `..`, symlinks, and `/private`
+    /// prefixes can't make a path look inside (or outside) when it isn't.
+    public func relativePath(from root: URL) -> String? {
+        guard let path = canonicalFileURL?.path, let rootPath = root.canonicalFileURL?.path else { return nil }
+        if path == rootPath { return "." }
+        let prefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
+        return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : nil
     }
 }

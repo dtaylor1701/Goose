@@ -18,6 +18,11 @@ Type-safe enhancements for Swift’s standard library collections, focusing on `
 - **`Array+Sorted`**: Provides KeyPath-based sorting and a `@Sorted` property wrapper to maintain collection order automatically.
 - **`String.addingQueryValueEncoding()`**: Percent-encodes one URL query value, always escaping `+ & = # ?` (unlike `.urlQueryAllowed`), so values survive both Foundation and `URLSearchParams` decoding.
 
+### 📁 Paths, Ignore Files & JSON
+- **`URL.relativePath(from:)`** / **`isContained(in:)`**: A file's path relative to a root after resolving `..` and symlinks (`nil` when it's outside), so paths can't pretend to be inside a folder.
+- **`IgnoreRules`**: Matches paths against `.gitignore`-syntax patterns (negation, anchoring, `**`, character classes), returning `nil` when no pattern decides so callers can cascade folder by folder.
+- **`String.canonicalJSON`** / **`prettyPrintedJSON`**: Re-serialise JSON with sorted keys, compactly (so equal values compare equal) or indented.
+
 ### 🧭 Environment
 - **`DeveloperEnvironment`**: Augments the minimal `PATH` that Finder-launched apps receive so they find Homebrew and version-manager tools.
 

@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Goose
 
@@ -17,5 +18,26 @@ struct StringJSONTests {
     func prettyPrinted() {
         #expect(#"{"b":1,"a":"x/y"}"#.prettyPrintedJSON == "{\n  \"a\" : \"x/y\",\n  \"b\" : 1\n}")
         #expect("not json".prettyPrintedJSON == nil)
+    }
+}
+
+@Suite("URL relative paths")
+struct URLRelativePathTests {
+    @Test("Paths inside a root are relative to it, after resolving .. and symlinks")
+    func relativePaths() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("GooseRel_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("notes"), withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("notes/up"), withDestinationURL: root)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        #expect(root.appendingPathComponent("notes/a.md").relativePath(from: root) == "notes/a.md")
+        #expect(root.relativePath(from: root) == ".")
+        #expect(root.appendingPathComponent("notes/../Package.swift").relativePath(from: root) == "Package.swift")
+        #expect(root.appendingPathComponent("notes/up/.ant/settings.json").relativePath(from: root) == ".ant/settings.json")
+        #expect(root.appendingPathComponent("../outside.txt").relativePath(from: root) == nil)
+        // /var and /private/var name the same folder.
+        let aliased = URL(fileURLWithPath: root.path.replacingOccurrences(of: "/private/var/", with: "/var/")).appendingPathComponent("x")
+        #expect(aliased.relativePath(from: root) == "x")
+        #expect(root.appendingPathComponent("x").isContained(in: root))
     }
 }
